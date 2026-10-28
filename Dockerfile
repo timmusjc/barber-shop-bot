@@ -1,19 +1,20 @@
 # ==========================================
 # Multi-stage Dockerfile for BarberBot Pro
+# Using Debian glibc (node:20-slim) to support all architectures
+# (x86_64 and ARM64 / Apple Silicon / AWS Graviton / Hetzner ARM)
 # ==========================================
 
 # Stage 1: Build Frontend and dependencies
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apk add --no-cache libc6-compat
+# Copy package.json (we intentionally do not copy a host package-lock.json
+# to avoid npm issue #4828 where native bindings like rolldown/esbuild
+# are locked to the wrong host OS or architecture)
+COPY package.json ./
 
-# Copy package manifests (both package.json and package-lock.json)
-COPY package.json package-lock.json* ./
-
-# Install all dependencies with --legacy-peer-deps to avoid npm Arborist edgesOut bug
+# Install dependencies for the container's architecture
 RUN npm install --legacy-peer-deps
 
 # Copy source code and config files
@@ -26,20 +27,21 @@ RUN npm run build
 # ==========================================
 # Stage 2: Production Runner
 # ==========================================
-FROM node:20-alpine AS runner
+FROM node:20-slim AS runner
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Install curl for healthcheck
-RUN apk add --no-cache curl
+# Install curl for Docker healthcheck
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy package files
-COPY package.json package-lock.json* ./
+# Copy package manifest
+COPY package.json ./
 
-# Copy ready node_modules from builder (avoids re-resolving dependencies)
+# Copy ready node_modules from builder (already compiled for this architecture)
 COPY --from=builder /app/node_modules ./node_modules
 
 # Install tsx globally in runner for server execution
