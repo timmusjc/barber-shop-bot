@@ -1,0 +1,6 @@
+{
+  "name": "BarberBot Pro - Омниканальный бот и CRM для барбершопа",
+  "description": "Умный бот для Telegram, WhatsApp, Instagram и Facebook с онлайн-записью, напоминаниями, профилем клиента, дашбордом администратора и уведомлениями мастеров.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
