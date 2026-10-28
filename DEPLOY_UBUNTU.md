@@ -1,83 +1,81 @@
 # 🚀 Instrukcja instalacji i wdrożenia BarberBot Pro na serwerze Ubuntu (20.04 / 22.04 / 24.04 LTS)
 
-Ten przewodnik przeprowadzi Cię krok po kroku przez instalację, konfigurację domeny z certyfikatem SSL, uruchomienie bota 24/7 w tle oraz powiązanie kluczy API **Telegram** i **Facebook Messenger / Instagram**.
+Ten przewodnik zawiera dwie metody uruchomienia bota i systemu CRM:
+1. **Metoda 1 (Zalecana): Docker & Docker Compose** — izolowane środowisko, automatyczny restart, zerowa zależność od wersji Node.js na serwerze.
+2. **Metoda 2: Bezpośrednio na hoście przez Node.js 20 i PM2**.
+
+Obie metody zawierają konfigurację darmowego certyfikatu SSL (Let's Encrypt), odwrotnego proxy Nginx oraz rejestrację webhooków dla **Telegram** i **Facebook / Instagram**.
 
 ---
 
-## 1. Wymagania systemowe
-- Serwer VPS z systemem **Ubuntu 20.04, 22.04 lub 24.04 LTS**
-- Minimum **1 GB RAM** (zalecane 2 GB) oraz 1 vCPU
-- Domena internetowa skierowana rekordem **A** na publiczny adres IP Twojego serwera (np. `twoja-domena.pl` lub `bot.twoja-domena.pl`) — *SSL jest wymagany przez Telegram i Meta dla webhooków*.
+## 1. Wymagania wstępne
+- Serwer VPS z systemem **Ubuntu 20.04, 22.04 lub 24.04 LTS** (Hetzner, DigitalOcean, OVH, AWS, etc.)
+- Minimum **1 GB RAM** (zalecane 2 GB RAM) oraz 1 vCPU
+- Domena internetowa skierowana rekordem DNS **A** na publiczny adres IP Twojego serwera (np. `twoja-domena.pl` lub `bot.twoja-domena.pl`) — *SSL HTTPS jest bezwzględnie wymagany przez Telegram i Meta dla webhooków*.
 
----
-
-## 2. Aktualizacja systemu i instalacja Node.js 20 LTS
-
-Połącz się z serwerem przez SSH:
+Połącz się ze swoim serwerem przez SSH:
 ```bash
 ssh root@twoj_adres_ip
 ```
 
-Zaktualizuj pakiety i zainstaluj podstawowe narzędzia:
+---
+
+## 🐳 METODA 1: Uruchomienie w kontenerze Docker (Zalecana)
+
+### Krok 1.1: Instalacja Docker i Docker Compose na Ubuntu
+
+Zaktualizuj pakiety i zainstaluj oficjalny silnik Docker oraz wtyczkę Docker Compose:
 ```bash
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y curl git build-essential nginx certbot python3-certbot-nginx
+sudo apt install -y curl git nginx certbot python3-certbot-nginx docker.io docker-compose-v2
+
+# Włącz autostart Dockera wraz z systemem:
+sudo systemctl enable --now docker
+
+# Opcjonalnie: dodaj bieżącego użytkownika do grupy docker (aby nie pisać sudo):
+sudo usermod -aG docker $USER
 ```
 
-Zainstaluj najnowszą stabilną wersję **Node.js 20 LTS**:
+Sprawdź wersje:
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-node -v # powinno pokazać v20.x.x
-npm -v
-```
-
-Zainstaluj menedżer procesów **PM2**:
-```bash
-sudo npm install -g pm2 tsx
+docker --version
+docker compose version
 ```
 
 ---
 
-## 3. Klonowanie projektu i instalacja zależności
+### Krok 1.2: Przygotowanie katalogu aplikacji i konfiguracja zmiennych `.env`
 
-Utwórz katalog dla aplikacji i sklonuj repozytorium:
+Utwórz katalog dla aplikacji i przejdź do niego:
 ```bash
 sudo mkdir -p /var/www/barber-bot
 sudo chown -R $USER:$USER /var/www/barber-bot
 cd /var/www/barber-bot
-
-# Skopiuj pliki projektu do tego katalogu lub sklonuj z Git:
-# git clone <URL_TWOJEGO_REPOZYTORIUM> .
-
-npm install
 ```
 
----
+Wgraj pliki projektu (np. przez Git `git clone <URL> .` lub SCP/SFTP).
 
-## 4. Konfiguracja zmiennych środowiskowych (.env)
-
-Utwórz plik `.env` w katalogu głównym `/var/www/barber-bot/.env`:
+Utwórz i edytuj plik produkcyjny `.env`:
 ```bash
 nano .env
 ```
 
-Wklej poniższą konfigurację i uzupełnij swoje klucze:
+Wklej konfigurację z Twoimi danymi i kluczami:
 ```ini
-# Port aplikacji
+# Środowisko i port
 PORT=3000
 NODE_ENV=production
 
-# Publiczny URL Twojej domeny (HTTPS)
+# Publiczny adres Twojej domeny (z protokołem https)
 APP_URL=https://twoja-domena.pl
 
 # --- TELEGRAM BOT ---
-# Uzyskaj token u @BotFather w Telegramie
+# Token uzyskany u @BotFather w Telegramie
 TELEGRAM_BOT_TOKEN=1234567890:ABCdefGhIJKlmNoPQRsTUVwxyZ1234567
 TELEGRAM_WEBHOOK_URL=https://twoja-domena.pl/api/webhook/telegram
 
 # --- FACEBOOK MESSENGER & INSTAGRAM ---
-# Uzyskaj w Meta for Developers (developers.facebook.com)
+# Dane z panelu Meta for Developers (developers.facebook.com)
 FACEBOOK_PAGE_ACCESS_TOKEN=EAAGm0PX4ZCpsBA...
 FACEBOOK_VERIFY_TOKEN=twoj_unikalny_tajny_token_weryfikacji
 FACEBOOK_APP_SECRET=a1b2c3d4e5f6...
@@ -86,44 +84,85 @@ Zapisz plik (`Ctrl + O`, `Enter`, potem `Ctrl + X`).
 
 ---
 
-## 5. Zbudowanie frontendu (Build)
+### Krok 1.3: Uruchomienie kontenera przez Docker Compose
 
+W katalogu `/var/www/barber-bot` wykonaj polecenie:
 ```bash
-npm run build
+docker compose up -d --build
+```
+
+Co robi to polecenie:
+- Zbuduje zoptymalizowany, lekki obraz produkcyjny bazujący na `node:20-alpine` (multi-stage build).
+- Przeprowadzi kompilację TypeScript i bundle Vite.
+- Uruchomi kontener o nazwie `barber-bot` w tle (`-d`).
+- Ustawi politykę restartu `unless-stopped` (kontener wstaje automatycznie po restarcie VPS lub awarii).
+
+Sprawdź status i logi:
+```bash
+# Sprawdzenie czy kontener działa i przechodzi healthcheck:
+docker compose ps
+
+# Podgląd logów bota na żywo:
+docker compose logs -f barber-bot
 ```
 
 ---
 
-## 6. Uruchomienie aplikacji przez PM2 (Auto-restart 24/7)
+### Krok 1.4: Zarządzanie kontenerem w codziennej pracy
 
-Uruchom serwer produkcyjny:
+- **Podgląd logów w czasie rzeczywistym:**
+  ```bash
+  docker compose logs -f
+  ```
+- **Restart bota (np. po zmianie kluczy w pliku `.env`):**
+  ```bash
+  docker compose restart
+  ```
+- **Zatrzymanie kontenera:**
+  ```bash
+  docker compose down
+  ```
+- **Aktualizacja kodu (np. po pobraniu nowej wersji z Git):**
+  ```bash
+  git pull
+  docker compose up -d --build
+  ```
+
+---
+
+## ⚙️ METODA 2: Uruchomienie bezpośrednio na hoście (Node.js 20 + PM2)
+
+Jeśli wolisz uruchomić aplikację tradycyjnie bez Dockera:
+
 ```bash
+# 1. Instalacja Node.js 20 LTS:
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+sudo npm install -g pm2 tsx
+
+# 2. Instalacja zależności i build w katalogu /var/www/barber-bot:
+cd /var/www/barber-bot
+npm install
+npm run build
+
+# 3. Uruchomienie przez PM2:
 pm2 start server.ts --name "barber-bot" --interpreter tsx -- --port 3000
-```
-
-Skonfiguruj automatyczny start PM2 po restarcie serwera:
-```bash
 pm2 save
 pm2 startup
-# Wykonaj polecenie, które wypisze PM2 na ekranie (zaczynające się od sudo env PATH=...)
-```
-
-Sprawdzenie statusu i logów:
-```bash
-pm2 status
-pm2 logs barber-bot
 ```
 
 ---
 
-## 7. Konfiguracja Nginx (Odwrotne proxy) i darmowy SSL Let's Encrypt
+## 🌐 2. Konfiguracja Nginx (Odwrotne proxy) i darmowy SSL Let's Encrypt
+
+Bez względu na to, czy używasz Dockera, czy PM2 — aplikacja nasłuchuje lokalnie na porcie `3000`. Nginx przekierowuje ruch z portu 80 i 443 do aplikacji.
 
 Utwórz konfigurację Nginx dla swojej domeny:
 ```bash
 sudo nano /etc/nginx/sites-available/barber-bot
 ```
 
-Wklej poniższą zawartość (zamień `twoja-domena.pl` na swoją domenę):
+Wklej poniższą zawartość (zamień `twoja-domena.pl` na swoją właściwą domenę):
 ```nginx
 server {
     listen 80;
@@ -143,14 +182,14 @@ server {
 }
 ```
 
-Włącz witrynę i przetestuj konfigurację Nginx:
+Włącz konfigurację i przeładuj Nginx:
 ```bash
 sudo ln -s /etc/nginx/sites-available/barber-bot /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-Uzyskaj bezpłatny certyfikat SSL od Let's Encrypt:
+Uzyskaj bezpłatny certyfikat SSL od Let's Encrypt (z automatycznym odnawianiem):
 ```bash
 sudo certbot --nginx -d twoja-domena.pl -d www.twoja-domena.pl
 ```
@@ -158,41 +197,46 @@ Wybierz automatyczne przekierowanie HTTP na HTTPS (opcja 2).
 
 ---
 
-## 8. Powiązanie kluczy z Telegramem i Facebookiem
+## 🔗 3. Połączenie Webhooków z Telegramem i Facebookiem
 
 ### A. Rejestracja Webhooka Telegram
-Wystarczy wykonać jedno zapytanie cURL z poziomu serwera lub przeglądarki:
+Wykonaj jedno polecenie cURL z poziomu serwera lub dowolnej konsoli:
 ```bash
 curl -F "url=https://twoja-domena.pl/api/webhook/telegram" https://api.telegram.org/bot<TWÓJ_TELEGRAM_BOT_TOKEN>/setWebhook
 ```
-*Odpowiedź powinna zawierać:* `{"ok":true,"result":true,"description":"Webhook was set"}`.
+*Odpowiedź powinna zawierać:*
+```json
+{"ok": true, "result": true, "description": "Webhook was set"}
+```
+
+Aby sprawdzić stan webhooka Telegram:
+```bash
+curl https://api.telegram.org/bot<TWÓJ_TELEGRAM_BOT_TOKEN>/getWebhookInfo
+```
 
 ### B. Konfiguracja Facebook Messenger & Instagram Direct
-1. Wejdź na [developers.facebook.com](https://developers.facebook.com/) i utwórz aplikację typu **Business / Komunikacja**.
-2. Dodaj produkt **Messenger** i **Instagram Graph API**.
+1. Wejdź na [Meta for Developers](https://developers.facebook.com/) i przejdź do swojej aplikacji.
+2. Dodaj produkt **Messenger** oraz **Instagram Graph API**.
 3. W sekcji **Webhooks**:
    - **Callback URL**: `https://twoja-domena.pl/api/webhook/facebook`
-   - **Verify Token**: wpisz tę samą wartość, którą ustawiłeś w pliku `.env` jako `FACEBOOK_VERIFY_TOKEN`.
-   - Kliknij **Weryfikuj i zapisz**.
-4. W sekcji subskrypcji pól strony zaznacz: `messages`, `messaging_postbacks`, `message_deliveries`.
+   - **Verify Token**: wpisz dokładnie tę samą wartość, którą ustawiłeś w pliku `.env` jako `FACEBOOK_VERIFY_TOKEN`.
+   - Kliknij **Weryfikuj i zapisz** (Nasz serwer automatycznie zweryfikuje `hub.challenge`).
+4. W subskrypcjach pól strony zaznacz:
+   - `messages`
+   - `messaging_postbacks`
+   - `message_deliveries`
 
 ---
 
-## 9. Przydatne komendy serwisowe
+## 🩺 4. Weryfikacja działania i testy
 
-- Podgląd logów bota na żywo:
-  ```bash
-  pm2 logs barber-bot
-  ```
-- Restart bota po zmianie kodu lub pliku `.env`:
-  ```bash
-  pm2 restart barber-bot
-  ```
-- Sprawdzenie działania portu lokalnego:
-  ```bash
-  curl http://127.0.0.1:3000/api/health
-  ```
-- Sprawdzenie statusu Nginx:
-  ```bash
-  sudo systemctl status nginx
-  ```
+Przetestuj poprawność działania bezpośrednio przez cURL:
+```bash
+# Test punktu kontrolnego zdrowia serwera (Health Check)
+curl -i https://twoja-domena.pl/api/health
+
+# Wynik powinien zwrócić HTTP 200 OK:
+# {"status":"ok","timestamp":"...","uptime":12.4,"port":3000}
+```
+
+Gratulacje! Twój BarberBot Pro działa teraz stabilnie w kontenerze Docker, przetwarza wiadomości ze wszystkich kanałów i zarządza rezerwacjami w czasie rzeczywistym.

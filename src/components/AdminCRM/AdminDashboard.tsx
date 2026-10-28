@@ -24,7 +24,8 @@ import {
   ShieldCheck, 
   Key, 
   Server,
-  Globe
+  Globe,
+  Box
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
@@ -64,6 +65,7 @@ export const AdminDashboard: React.FC = () => {
   // Webhook Simulator State
   const [webhookLog, setWebhookLog] = useState<string[]>([]);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [deployMethod, setDeployMethod] = useState<'docker' | 'pm2'>('docker');
   const [keyTesting, setKeyTesting] = useState<'telegram' | 'facebook' | null>(null);
   const [keyTestFeedback, setKeyTestFeedback] = useState<string | null>(null);
 
@@ -794,105 +796,300 @@ export const AdminDashboard: React.FC = () => {
       {/* ===================== TAB 5: UBUNTU DEPLOYMENT GUIDE ===================== */}
       {activeTab === 'ubuntu' && (
         <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 animate-in fade-in">
-          <div className="flex items-center gap-3 border-b border-neutral-800 pb-4">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold border border-amber-500/40">
-              <Terminal className="w-5 h-5" />
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-800 pb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold border border-amber-500/40">
+                <Terminal className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-neutral-100">
+                  Instalacja i wdrożenie na serwerze Ubuntu (20.04 / 22.04 / 24.04 LTS)
+                </h3>
+                <p className="text-xs text-neutral-400">
+                  Izolowane kontenery Docker lub tradycyjne uruchomienie przez Node.js + PM2 z darmowym SSL i Nginx
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-black text-neutral-100">
-                Kompletna instrukcja instalacji na serwerze Ubuntu (20.04 / 22.04 / 24.04 LTS)
-              </h3>
-              <p className="text-xs text-neutral-400">
-                Krok po kroku: Node.js, PM2 daemon, Nginx Reverse Proxy, Let's Encrypt SSL i Webhooki
-              </p>
+
+            {/* Method Toggle: Docker vs PM2 */}
+            <div className="flex items-center gap-1.5 p-1 bg-neutral-950 border border-neutral-800 rounded-2xl self-start md:self-auto">
+              <button
+                onClick={() => setDeployMethod('docker')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  deployMethod === 'docker'
+                    ? 'bg-amber-500 text-neutral-950 shadow-md'
+                    : 'text-neutral-400 hover:text-neutral-200'
+                }`}
+              >
+                <Box className="w-4 h-4" />
+                <span>🐳 Docker (Zalecane)</span>
+              </button>
+              <button
+                onClick={() => setDeployMethod('pm2')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  deployMethod === 'pm2'
+                    ? 'bg-amber-500 text-neutral-950 shadow-md'
+                    : 'text-neutral-400 hover:text-neutral-200'
+                }`}
+              >
+                <Server className="w-4 h-4" />
+                <span>⚙️ Node.js + PM2</span>
+              </button>
             </div>
           </div>
 
-          {/* Step 1: Packages */}
-          <div className="space-y-2">
-            <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">1</span>
-              Aktualizacja systemu i instalacja Node.js 20 LTS + PM2
-            </h4>
-            <div className="relative bg-neutral-950 p-4 rounded-2xl border border-neutral-800 font-mono text-xs text-neutral-200">
-              <button
-                onClick={() => copyToClipboard('sudo apt update && sudo apt upgrade -y\nsudo apt install -y curl git nginx certbot python3-certbot-nginx\ncurl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -\nsudo apt install -y nodejs\nsudo npm install -g pm2 tsx', 'step1')}
-                className="absolute top-3 right-3 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] flex items-center gap-1"
-              >
-                {copiedCode === 'step1' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                <span>Kopiuj</span>
-              </button>
-              <pre className="whitespace-pre-wrap leading-relaxed">
+          {/* DOCKER METHOD */}
+          {deployMethod === 'docker' && (
+            <div className="space-y-6 animate-in fade-in">
+              <div className="p-4 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-start gap-3">
+                <Box className="w-5 h-5 text-sky-400 mt-0.5 shrink-0" />
+                <div className="text-xs text-sky-200 leading-relaxed">
+                  <p className="font-bold text-sky-100">Zalety uruchomienia w kontenerze Docker:</p>
+                  Aplikacja działa w izolowanym środowisku Node.js 20 Alpine, kompilacja Vite i serwer Express są spakowane w zoptymalizowany obraz, a Docker dba o automatyczny restart (`unless-stopped`) po reboocie serwera.
+                </div>
+              </div>
+
+              {/* Step 1: Install Docker */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">1</span>
+                  Instalacja Docker i Docker Compose na Ubuntu
+                </h4>
+                <div className="relative bg-neutral-950 p-4 rounded-2xl border border-neutral-800 font-mono text-xs text-neutral-200">
+                  <button
+                    onClick={() => copyToClipboard('sudo apt update && sudo apt upgrade -y\nsudo apt install -y curl git nginx certbot python3-certbot-nginx docker.io docker-compose-v2\nsudo systemctl enable --now docker\nsudo usermod -aG docker $USER', 'dock1')}
+                    className="absolute top-3 right-3 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] flex items-center gap-1"
+                  >
+                    {copiedCode === 'dock1' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>Kopiuj</span>
+                  </button>
+                  <pre className="whitespace-pre-wrap leading-relaxed">
+{`sudo apt update && sudo apt upgrade -y
+sudo apt install -y curl git nginx certbot python3-certbot-nginx docker.io docker-compose-v2
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER`}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Step 2: Clone & .env */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">2</span>
+                  Katalog projektu i plik konfiguracyjny (.env)
+                </h4>
+                <div className="relative bg-neutral-950 p-4 rounded-2xl border border-neutral-800 font-mono text-xs text-neutral-200">
+                  <button
+                    onClick={() => copyToClipboard('sudo mkdir -p /var/www/barber-bot\nsudo chown -R $USER:$USER /var/www/barber-bot\ncd /var/www/barber-bot\n# Wgraj pliki projektu (Dockerfile, docker-compose.yml, server.ts, src...)\nnano .env', 'dock2')}
+                    className="absolute top-3 right-3 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] flex items-center gap-1"
+                  >
+                    {copiedCode === 'dock2' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>Kopiuj</span>
+                  </button>
+                  <pre className="whitespace-pre-wrap leading-relaxed">
+{`sudo mkdir -p /var/www/barber-bot
+sudo chown -R $USER:$USER /var/www/barber-bot
+cd /var/www/barber-bot
+
+# W pliku .env uzupełnij klucze:
+nano .env
+
+# Przykładowy .env:
+PORT=3000
+NODE_ENV=production
+APP_URL=https://twoja-domena.pl
+TELEGRAM_BOT_TOKEN=1234567890:ABCdefGhIJKlmNoPQRsTUVwxyZ1234567
+TELEGRAM_WEBHOOK_URL=https://twoja-domena.pl/api/webhook/telegram
+FACEBOOK_PAGE_ACCESS_TOKEN=EAAGm0PX4ZCpsBA...
+FACEBOOK_VERIFY_TOKEN=blade_crown_barber_secret_token
+FACEBOOK_APP_SECRET=a1b2c3d4e5f6...`}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Step 3: Run container */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">3</span>
+                  Uruchomienie kontenera w tle (Docker Compose)
+                </h4>
+                <div className="relative bg-neutral-950 p-4 rounded-2xl border border-neutral-800 font-mono text-xs text-neutral-200">
+                  <button
+                    onClick={() => copyToClipboard('docker compose up -d --build\ndocker compose ps\ndocker compose logs -f barber-bot', 'dock3')}
+                    className="absolute top-3 right-3 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] flex items-center gap-1"
+                  >
+                    {copiedCode === 'dock3' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>Kopiuj</span>
+                  </button>
+                  <pre className="whitespace-pre-wrap leading-relaxed">
+{`# Zbuduj obraz i uruchom kontener w tle:
+docker compose up -d --build
+
+# Sprawdź status kontenera i healthcheck:
+docker compose ps
+
+# Podgląd logów bota w czasie rzeczywistym:
+docker compose logs -f barber-bot`}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Step 4: Nginx & SSL */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">4</span>
+                  Nginx Reverse Proxy & Darmowy SSL Let's Encrypt (HTTPS)
+                </h4>
+                <div className="relative bg-neutral-950 p-4 rounded-2xl border border-neutral-800 font-mono text-xs text-neutral-200">
+                  <button
+                    onClick={() => copyToClipboard('sudo nano /etc/nginx/sites-available/barber-bot\nsudo ln -s /etc/nginx/sites-available/barber-bot /etc/nginx/sites-enabled/\nsudo nginx -t\nsudo systemctl reload nginx\nsudo certbot --nginx -d twoja-domena.pl', 'dock4')}
+                    className="absolute top-3 right-3 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] flex items-center gap-1"
+                  >
+                    {copiedCode === 'dock4' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>Kopiuj</span>
+                  </button>
+                  <pre className="whitespace-pre-wrap leading-relaxed">
+{`# 1. Konfiguracja proxy w /etc/nginx/sites-available/barber-bot:
+server {
+    server_name twoja-domena.pl www.twoja-domena.pl;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# 2. Aktywacja konfiguracji i wygenerowanie darmowego certyfikatu SSL:
+sudo ln -s /etc/nginx/sites-available/barber-bot /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d twoja-domena.pl -d www.twoja-domena.pl`}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Step 5: Webhook & Maintenance */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">5</span>
+                  Rejestracja Webhooków i przydatne komendy serwisowe
+                </h4>
+                <div className="relative bg-neutral-950 p-4 rounded-2xl border border-neutral-800 font-mono text-xs text-neutral-200">
+                  <button
+                    onClick={() => copyToClipboard('curl -F "url=https://twoja-domena.pl/api/webhook/telegram" https://api.telegram.org/bot<TOKEN>/setWebhook\ndocker compose restart\ndocker compose logs -f', 'dock5')}
+                    className="absolute top-3 right-3 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] flex items-center gap-1"
+                  >
+                    {copiedCode === 'dock5' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>Kopiuj</span>
+                  </button>
+                  <pre className="whitespace-pre-wrap leading-relaxed">
+{`# Rejestracja Webhooka Telegram:
+curl -F "url=https://twoja-domena.pl/api/webhook/telegram" https://api.telegram.org/bot<TOKEN>/setWebhook
+
+# Restart bota po zmianie .env:
+docker compose restart
+
+# Aktualizacja aplikacji do nowej wersji:
+git pull && docker compose up -d --build`}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* PM2 METHOD */}
+          {deployMethod === 'pm2' && (
+            <div className="space-y-6 animate-in fade-in">
+              {/* Step 1: Packages */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">1</span>
+                  Aktualizacja systemu i instalacja Node.js 20 LTS + PM2
+                </h4>
+                <div className="relative bg-neutral-950 p-4 rounded-2xl border border-neutral-800 font-mono text-xs text-neutral-200">
+                  <button
+                    onClick={() => copyToClipboard('sudo apt update && sudo apt upgrade -y\nsudo apt install -y curl git nginx certbot python3-certbot-nginx\ncurl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -\nsudo apt install -y nodejs\nsudo npm install -g pm2 tsx', 'pm1')}
+                    className="absolute top-3 right-3 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] flex items-center gap-1"
+                  >
+                    {copiedCode === 'pm1' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>Kopiuj</span>
+                  </button>
+                  <pre className="whitespace-pre-wrap leading-relaxed">
 {`sudo apt update && sudo apt upgrade -y
 sudo apt install -y curl git nginx certbot python3-certbot-nginx
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
 sudo npm install -g pm2 tsx`}
-              </pre>
-            </div>
-          </div>
+                  </pre>
+                </div>
+              </div>
 
-          {/* Step 2: Clone & Build */}
-          <div className="space-y-2">
-            <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">2</span>
-              Klonowanie projektu i instalacja bibliotek
-            </h4>
-            <div className="relative bg-neutral-950 p-4 rounded-2xl border border-neutral-800 font-mono text-xs text-neutral-200">
-              <button
-                onClick={() => copyToClipboard('sudo mkdir -p /var/www/barber-bot\nsudo chown -R $USER:$USER /var/www/barber-bot\ncd /var/www/barber-bot\n# sklonuj lub wgraj pliki\nnpm install\nnpm run build', 'step2')}
-                className="absolute top-3 right-3 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] flex items-center gap-1"
-              >
-                {copiedCode === 'step2' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                <span>Kopiuj</span>
-              </button>
-              <pre className="whitespace-pre-wrap leading-relaxed">
+              {/* Step 2: Clone & Build */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">2</span>
+                  Klonowanie projektu i instalacja bibliotek
+                </h4>
+                <div className="relative bg-neutral-950 p-4 rounded-2xl border border-neutral-800 font-mono text-xs text-neutral-200">
+                  <button
+                    onClick={() => copyToClipboard('sudo mkdir -p /var/www/barber-bot\nsudo chown -R $USER:$USER /var/www/barber-bot\ncd /var/www/barber-bot\nnpm install\nnpm run build', 'pm2')}
+                    className="absolute top-3 right-3 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] flex items-center gap-1"
+                  >
+                    {copiedCode === 'pm2' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>Kopiuj</span>
+                  </button>
+                  <pre className="whitespace-pre-wrap leading-relaxed">
 {`sudo mkdir -p /var/www/barber-bot
 sudo chown -R $USER:$USER /var/www/barber-bot
 cd /var/www/barber-bot
 npm install
 npm run build`}
-              </pre>
-            </div>
-          </div>
+                  </pre>
+                </div>
+              </div>
 
-          {/* Step 3: PM2 daemon */}
-          <div className="space-y-2">
-            <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">3</span>
-              Uruchomienie w tle przez PM2 (Auto-restart 24/7)
-            </h4>
-            <div className="relative bg-neutral-950 p-4 rounded-2xl border border-neutral-800 font-mono text-xs text-neutral-200">
-              <button
-                onClick={() => copyToClipboard('pm2 start server.ts --name "barber-bot" --interpreter tsx\npm2 save\npm2 startup', 'step3')}
-                className="absolute top-3 right-3 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] flex items-center gap-1"
-              >
-                {copiedCode === 'step3' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                <span>Kopiuj</span>
-              </button>
-              <pre className="whitespace-pre-wrap leading-relaxed">
+              {/* Step 3: PM2 daemon */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">3</span>
+                  Uruchomienie w tle przez PM2 (Auto-restart 24/7)
+                </h4>
+                <div className="relative bg-neutral-950 p-4 rounded-2xl border border-neutral-800 font-mono text-xs text-neutral-200">
+                  <button
+                    onClick={() => copyToClipboard('pm2 start server.ts --name "barber-bot" --interpreter tsx\npm2 save\npm2 startup', 'pm3')}
+                    className="absolute top-3 right-3 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] flex items-center gap-1"
+                  >
+                    {copiedCode === 'pm3' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>Kopiuj</span>
+                  </button>
+                  <pre className="whitespace-pre-wrap leading-relaxed">
 {`pm2 start server.ts --name "barber-bot" --interpreter tsx
 pm2 save
 pm2 startup`}
-              </pre>
-            </div>
-          </div>
+                  </pre>
+                </div>
+              </div>
 
-          {/* Step 4: Nginx & SSL */}
-          <div className="space-y-2">
-            <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">4</span>
-              Konfiguracja Nginx i darmowy certyfikat HTTPS (Let's Encrypt)
-            </h4>
-            <div className="relative bg-neutral-950 p-4 rounded-2xl border border-neutral-800 font-mono text-xs text-neutral-200">
-              <button
-                onClick={() => copyToClipboard('sudo nano /etc/nginx/sites-available/barber-bot\n# Wklej konfigurację proxy na port 3000\nsudo ln -s /etc/nginx/sites-available/barber-bot /etc/nginx/sites-enabled/\nsudo nginx -t\nsudo systemctl reload nginx\nsudo certbot --nginx -d twoja-domena.pl', 'step4')}
-                className="absolute top-3 right-3 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] flex items-center gap-1"
-              >
-                {copiedCode === 'step4' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                <span>Kopiuj</span>
-              </button>
-              <pre className="whitespace-pre-wrap leading-relaxed">
+              {/* Step 4: Nginx & SSL */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">4</span>
+                  Konfiguracja Nginx i darmowy certyfikat HTTPS (Let's Encrypt)
+                </h4>
+                <div className="relative bg-neutral-950 p-4 rounded-2xl border border-neutral-800 font-mono text-xs text-neutral-200">
+                  <button
+                    onClick={() => copyToClipboard('sudo nano /etc/nginx/sites-available/barber-bot\nsudo ln -s /etc/nginx/sites-available/barber-bot /etc/nginx/sites-enabled/\nsudo nginx -t\nsudo systemctl reload nginx\nsudo certbot --nginx -d twoja-domena.pl', 'pm4')}
+                    className="absolute top-3 right-3 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] flex items-center gap-1"
+                  >
+                    {copiedCode === 'pm4' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>Kopiuj</span>
+                  </button>
+                  <pre className="whitespace-pre-wrap leading-relaxed">
 {`server {
     server_name twoja-domena.pl;
     location / {
@@ -907,37 +1104,38 @@ pm2 startup`}
     }
 }
 
-# Po zapisaniu wygeneruj SSL:
+# Generowanie certyfikatu SSL:
 sudo certbot --nginx -d twoja-domena.pl`}
-              </pre>
-            </div>
-          </div>
+                  </pre>
+                </div>
+              </div>
 
-          {/* Step 5: Webhook registration */}
-          <div className="space-y-2">
-            <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">5</span>
-              Połączenie Webhooków Telegram i Meta
-            </h4>
-            <div className="relative bg-neutral-950 p-4 rounded-2xl border border-neutral-800 font-mono text-xs text-neutral-200">
-              <button
-                onClick={() => copyToClipboard('curl -F "url=https://twoja-domena.pl/api/webhook/telegram" https://api.telegram.org/bot<TOKEN>/setWebhook', 'step5')}
-                className="absolute top-3 right-3 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] flex items-center gap-1"
-              >
-                {copiedCode === 'step5' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                <span>Kopiuj</span>
-              </button>
-              <pre className="whitespace-pre-wrap leading-relaxed">
+              {/* Step 5: Webhook registration */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">5</span>
+                  Połączenie Webhooków Telegram i Meta
+                </h4>
+                <div className="relative bg-neutral-950 p-4 rounded-2xl border border-neutral-800 font-mono text-xs text-neutral-200">
+                  <button
+                    onClick={() => copyToClipboard('curl -F "url=https://twoja-domena.pl/api/webhook/telegram" https://api.telegram.org/bot<TOKEN>/setWebhook', 'pm5')}
+                    className="absolute top-3 right-3 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] flex items-center gap-1"
+                  >
+                    {copiedCode === 'pm5' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>Kopiuj</span>
+                  </button>
+                  <pre className="whitespace-pre-wrap leading-relaxed">
 {`# 1. Telegram:
 curl -F "url=https://twoja-domena.pl/api/webhook/telegram" https://api.telegram.org/bot<TOKEN>/setWebhook
 
 # 2. Meta (Facebook & Instagram):
-# Panel developers.facebook.com -> Webhooks -> Messenger:
 # Callback URL: https://twoja-domena.pl/api/webhook/facebook
-# Verify Token: blade_crown_barber_secret_token (z pliku .env)`}
-              </pre>
+# Verify Token: blade_crown_barber_secret_token`}
+                  </pre>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
         </div>
       )}

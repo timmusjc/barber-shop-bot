@@ -1,0 +1,31 @@
+# ========================================================
+# Docker Compose configuration for BarberBot Pro
+# Omnichannel Barbershop Bot (TG, WA, IG, FB) & Admin CRM
+# ========================================================
+
+services:
+  barber-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: barber-bot
+    restart: unless-stopped
+    ports:
+      # Exposes port 3000 to the host (for Nginx reverse proxy)
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
