@@ -10,11 +10,11 @@ WORKDIR /app
 # Install build dependencies
 RUN apk add --no-cache libc6-compat
 
-# Copy package files
-COPY package.json ./
+# Copy package manifests (both package.json and package-lock.json)
+COPY package.json package-lock.json* ./
 
-# Install all dependencies (including devDependencies needed for build)
-RUN npm install
+# Install all dependencies with --legacy-peer-deps to avoid npm Arborist edgesOut bug
+RUN npm install --legacy-peer-deps
 
 # Copy source code and config files
 COPY tsconfig.json vite.config.ts server.ts index.html metadata.json ./
@@ -36,9 +36,14 @@ ENV PORT=3000
 # Install curl for healthcheck
 RUN apk add --no-cache curl
 
-# Copy package files and install production dependencies + tsx runner
-COPY package.json ./
-RUN npm install --omit=dev && npm install -g tsx
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Copy ready node_modules from builder (avoids re-resolving dependencies)
+COPY --from=builder /app/node_modules ./node_modules
+
+# Install tsx globally in runner for server execution
+RUN npm install -g tsx
 
 # Copy built frontend assets from builder
 COPY --from=builder /app/dist ./dist

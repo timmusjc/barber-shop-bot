@@ -153,9 +153,32 @@ pm2 startup
 
 ---
 
-## 🌐 2. Konfiguracja Nginx (Odwrotne proxy) i darmowy SSL Let's Encrypt
+## 🌐 2. Konfiguracja SSL i Odwrotnego Proxy (Nginx)
 
-Bez względu na to, czy używasz Dockera, czy PM2 — aplikacja nasłuchuje lokalnie na porcie `3000`. Nginx przekierowuje ruch z portu 80 i 443 do aplikacji.
+### Wariant A: Masz już Nginx Proxy Manager (NPM) w Dockerze ⭐ (NAJPROSTSZA ŚCIEŻKA!)
+Jeśli masz już uruchomiony Nginx Proxy Manager (NPM):
+- ❌ **Certbot NIE jest potrzebny na serwerze!** NPM ma wbudowany Certbot i sam generuje oraz odnawia certyfikaty Let's Encrypt w tle.
+- ❌ **Node.js i PM2 NIE są potrzebne na hoście!** Aplikacja i Node.js działają wewnątrz kontenera Docker `barber-bot`.
+- Jedyne co musisz zrobić, to uruchomić bota: `docker compose up -d --build` i skonfigurować Proxy Host w panelu NPM:
+
+**Konfiguracja w panelu NPM (port 81):**
+1. Otwórz panel NPM w przeglądarce -> zakładka **Proxy Hosts** -> **Add Proxy Host**.
+2. **Details**:
+   - **Domain Names**: `twoja-domena.pl` (i opcjonalnie `www.twoja-domena.pl`)
+   - **Scheme**: `http`
+   - **Forward Hostname / IP**: `172.17.0.1` (domyślny adres IP bramy Docker na hoście) lub lokalny/zewnętrzny IP serwera
+   - **Forward Port**: `3000`
+   - Zaznacz: `Block Common Exploits` oraz `Websockets Support`
+3. **SSL**:
+   - **SSL Certificate**: Wybierz `Request a new SSL Certificate`
+   - Zaznacz: `Force SSL`, `HTTP/2 Support`
+   - Wpisz swój email i zaznacz `I Agree to the Let's Encrypt Terms of Service`
+4. Kliknij **Save**. Gotowe! Twoja domena ma automatyczny SSL HTTPS i przekazuje ruch do bota.
+
+---
+
+### Wariant B: Klasyczny Nginx i Certbot instalowane w systemie Ubuntu
+Jeśli nie korzystasz z NPM, skonfiguruj natywnego Nginxa na serwerze:
 
 Utwórz konfigurację Nginx dla swojej domeny:
 ```bash

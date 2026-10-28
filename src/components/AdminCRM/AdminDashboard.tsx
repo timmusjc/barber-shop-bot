@@ -844,8 +844,11 @@ export const AdminDashboard: React.FC = () => {
               <div className="p-4 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-start gap-3">
                 <Box className="w-5 h-5 text-sky-400 mt-0.5 shrink-0" />
                 <div className="text-xs text-sky-200 leading-relaxed">
-                  <p className="font-bold text-sky-100">Zalety uruchomienia w kontenerze Docker:</p>
+                  <p className="font-bold text-sky-100 mb-1">Zalety uruchomienia w kontenerze Docker:</p>
                   Aplikacja działa w izolowanym środowisku Node.js 20 Alpine, kompilacja Vite i serwer Express są spakowane w zoptymalizowany obraz, a Docker dba o automatyczny restart (`unless-stopped`) po reboocie serwera.
+                  <p className="mt-2 text-amber-300 font-semibold">
+                    💡 Jeśli używasz <strong>Nginx Proxy Manager (NPM)</strong>: <u>NIE instaluj Certbot, Node.js ani PM2 na Ubuntu</u>! W panelu NPM po prostu skieruj domenę na <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-amber-200 font-mono">172.17.0.1:3000</code> i zaznacz Request SSL Certificate.
+                  </p>
                 </div>
               </div>
 

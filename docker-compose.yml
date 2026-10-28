@@ -11,8 +11,8 @@ services:
     container_name: barber-bot
     restart: unless-stopped
     ports:
-      # Exposes port 3000 to the host (for Nginx reverse proxy)
-      - "127.0.0.1:3000:3000"
+      # Exposes port 3000 (accessible by host and Docker containers like Nginx Proxy Manager)
+      - "3000:3000"
     env_file:
       - .env
     environment:
