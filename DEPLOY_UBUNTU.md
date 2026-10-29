@@ -175,6 +175,18 @@ Jeśli masz już uruchomiony Nginx Proxy Manager (NPM):
    - Wpisz swój email i zaznacz `I Agree to the Let's Encrypt Terms of Service`
 4. Kliknij **Save**. Gotowe! Twoja domena ma automatyczny SSL HTTPS i przekazuje ruch do bota.
 
+#### ⚠️ Rozwiązanie błędu "502 Bad Gateway" w Nginx Proxy Manager:
+Jeśli po skonfigurowaniu widzisz błąd **502 Bad Gateway**:
+- **Przyczyna:** NPM sam działa w kontenerze Docker. Jeśli w polu **Forward Hostname / IP** wpisałeś `127.0.0.1` lub `localhost`, NPM szuka bota wewnątrz **samego siebie**, gdzie port 3000 nie istnieje!
+- **Szybkie rozwiązanie (10 sekund):**
+  1. Wejdź w panelu NPM do edycji swojego Proxy Hosta.
+  2. W polu **Forward Hostname / IP** zamień `127.0.0.1` na:
+     - `172.17.0.1` (standardowy adres IP hosta Ubuntu w sieci Docker bridge)
+     - LUB wpisz zewnętrzny adres IP swojego serwera VPS (np. `185.x.x.x`).
+  3. Port: `3000`. Kliknij **Save**.
+- **Alternatywne rozwiązanie (wspólna sieć Docker):**
+  Połącz NPM i `barber-bot` do wspólnej sieci Docker (np. `npm-network`), wtedy jako **Forward Hostname / IP** wpisujesz po prostu nazwę kontenera: `barber-bot`, port: `3000`.
+
 ---
 
 ### Wariant B: Klasyczny Nginx i Certbot instalowane w systemie Ubuntu
@@ -223,18 +235,22 @@ Wybierz automatyczne przekierowanie HTTP na HTTPS (opcja 2).
 ## 🔗 3. Połączenie Webhooków z Telegramem i Facebookiem
 
 ### A. Rejestracja Webhooka Telegram
-Wykonaj jedno polecenie cURL z poziomu serwera lub dowolnej konsoli:
+Wykonaj polecenie cURL w cudzysłowach (lub po prostu otwórz ten link w przeglądarce):
 ```bash
-curl -F "url=https://twoja-domena.pl/api/webhook/telegram" https://api.telegram.org/bot<TWÓJ_TELEGRAM_BOT_TOKEN>/setWebhook
+# Zastąp 1234567890:ABC... swoim prawdziwym tokenem (BEZ nawiasów < >):
+curl "https://api.telegram.org/bot1234567890:ABCdefGhIJKlmNoPQRsTUVwxyZ1234567/setWebhook?url=https://twoja-domena.pl/api/webhook/telegram"
 ```
+*Lub otwórz w przeglądarce:*
+`https://api.telegram.org/botTWÓJ_TOKEN/setWebhook?url=https://twoja-domena.pl/api/webhook/telegram`
+
 *Odpowiedź powinna zawierać:*
 ```json
 {"ok": true, "result": true, "description": "Webhook was set"}
 ```
 
-Aby sprawdzić stan webhooka Telegram:
+Aby sprawdzić aktualny status webhooka Telegram:
 ```bash
-curl https://api.telegram.org/bot<TWÓJ_TELEGRAM_BOT_TOKEN>/getWebhookInfo
+curl "https://api.telegram.org/botTWÓJ_TOKEN/getWebhookInfo"
 ```
 
 ### B. Konfiguracja Facebook Messenger & Instagram Direct

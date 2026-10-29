@@ -984,15 +984,15 @@ sudo certbot --nginx -d twoja-domena.pl -d www.twoja-domena.pl`}
                 </h4>
                 <div className="relative bg-neutral-950 p-4 rounded-2xl border border-neutral-800 font-mono text-xs text-neutral-200">
                   <button
-                    onClick={() => copyToClipboard('curl -F "url=https://twoja-domena.pl/api/webhook/telegram" https://api.telegram.org/bot<TOKEN>/setWebhook\ndocker compose restart\ndocker compose logs -f', 'dock5')}
+                    onClick={() => copyToClipboard('curl "https://api.telegram.org/botTWÓJ_TOKEN/setWebhook?url=https://twoja-domena.pl/api/webhook/telegram"\ndocker compose restart\ndocker compose logs -f', 'dock5')}
                     className="absolute top-3 right-3 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] flex items-center gap-1"
                   >
                     {copiedCode === 'dock5' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                     <span>Kopiuj</span>
                   </button>
                   <pre className="whitespace-pre-wrap leading-relaxed">
-{`# Rejestracja Webhooka Telegram:
-curl -F "url=https://twoja-domena.pl/api/webhook/telegram" https://api.telegram.org/bot<TOKEN>/setWebhook
+{`# Rejestracja Webhooka Telegram (wklej swój token bez nawiasów < >):
+curl "https://api.telegram.org/botTWÓJ_TOKEN/setWebhook?url=https://twoja-domena.pl/api/webhook/telegram"
 
 # Restart bota po zmianie .env:
 docker compose restart
@@ -1121,15 +1121,15 @@ sudo certbot --nginx -d twoja-domena.pl`}
                 </h4>
                 <div className="relative bg-neutral-950 p-4 rounded-2xl border border-neutral-800 font-mono text-xs text-neutral-200">
                   <button
-                    onClick={() => copyToClipboard('curl -F "url=https://twoja-domena.pl/api/webhook/telegram" https://api.telegram.org/bot<TOKEN>/setWebhook', 'pm5')}
+                    onClick={() => copyToClipboard('curl "https://api.telegram.org/botTWÓJ_TOKEN/setWebhook?url=https://twoja-domena.pl/api/webhook/telegram"', 'pm5')}
                     className="absolute top-3 right-3 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] flex items-center gap-1"
                   >
                     {copiedCode === 'pm5' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                     <span>Kopiuj</span>
                   </button>
                   <pre className="whitespace-pre-wrap leading-relaxed">
-{`# 1. Telegram:
-curl -F "url=https://twoja-domena.pl/api/webhook/telegram" https://api.telegram.org/bot<TOKEN>/setWebhook
+{`# 1. Telegram (wklej swój token bez nawiasów < >):
+curl "https://api.telegram.org/botTWÓJ_TOKEN/setWebhook?url=https://twoja-domena.pl/api/webhook/telegram"
 
 # 2. Meta (Facebook & Instagram):
 # Callback URL: https://twoja-domena.pl/api/webhook/facebook
